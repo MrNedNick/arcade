@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Free browser games — no ads, no sign-up. Snake and more, made to feel good to play."
+    />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0b0d17" />
+    <link rel="icon" type="image/svg+xml" href="/arcade/favicon.svg" />
+    <title>Arcade — free browser games</title>
+    <script>
+      // Apply the saved theme before first paint so there is no flash.
+      try {
+        const t = localStorage.getItem('arcade:theme')
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
