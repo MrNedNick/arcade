@@ -1,6 +1,7 @@
 import type { Component } from 'vue'
 import type { ScoreOrder } from '@/scores/scoreboard'
 import type { GameId } from './ids'
+import SnakePreview from './snake/SnakePreview.vue'
 
 export interface GameInfo {
   id: GameId
@@ -20,7 +21,18 @@ export interface GameInfo {
   hasSave?: () => boolean
 }
 
-export const GAMES: GameInfo[] = []
+export const GAMES: GameInfo[] = [
+  {
+    id: 'snake',
+    title: 'Snake',
+    tagline: 'Eat, grow, don’t bite yourself.',
+    color: '--game-snake',
+    order: 'desc',
+    scoreLabel: 'Score',
+    preview: SnakePreview,
+    load: () => import('./snake/SnakeGame.vue'),
+  },
+]
 
 export function findGame(id: unknown): GameInfo | undefined {
   return GAMES.find((g) => g.id === id)
