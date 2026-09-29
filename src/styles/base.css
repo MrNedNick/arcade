@@ -69,3 +69,14 @@ a {
     transition-duration: 1ms !important;
   }
 }
+
+/* Page transitions: the lobby card morphs into the game board. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+::view-transition-group(*) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
