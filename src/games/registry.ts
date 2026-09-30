@@ -4,6 +4,7 @@ import type { GameId } from './ids'
 import SnakePreview from './snake/SnakePreview.vue'
 import TetrisPreview from './tetris/TetrisPreview.vue'
 import MinesweeperPreview from './minesweeper/MinesweeperPreview.vue'
+import SudokuPreview from './sudoku/SudokuPreview.vue'
 
 export interface GameInfo {
   id: GameId
@@ -56,6 +57,22 @@ export const GAMES: GameInfo[] = [
     formatScore: (s) => formatTime(s),
     preview: MinesweeperPreview,
     load: () => import('./minesweeper/MinesweeperGame.vue'),
+    variants: [
+      { id: 'easy', label: 'Easy' },
+      { id: 'medium', label: 'Medium' },
+      { id: 'hard', label: 'Hard' },
+    ],
+  },
+  {
+    id: 'sudoku',
+    title: 'Sudoku',
+    tagline: 'Nine by nine, one answer, no guessing needed.',
+    color: '--game-sudoku',
+    order: 'asc',
+    scoreLabel: 'Time',
+    formatScore: (s) => formatTime(s),
+    preview: SudokuPreview,
+    load: () => import('./sudoku/SudokuGame.vue'),
     variants: [
       { id: 'easy', label: 'Easy' },
       { id: 'medium', label: 'Medium' },
