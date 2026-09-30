@@ -33,13 +33,16 @@ router.beforeResolve((to, from) => {
   if (!supportsViewTransitions || from === START_LOCATION || prefersReducedMotion()) return
   if (to.fullPath === from.fullPath) return
   return new Promise<void>((resolve) => {
-    document.startViewTransition(
+    const transition = document.startViewTransition(
       () =>
         new Promise<void>((done) => {
           finishTransition = done
           resolve()
         }),
     )
+    // The browser may skip the animation (e.g. the viewport resized); navigation goes on.
+    transition.ready.catch(() => resolve())
+    transition.finished.catch(() => undefined)
   })
 })
 
