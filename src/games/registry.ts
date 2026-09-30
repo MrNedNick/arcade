@@ -2,6 +2,7 @@ import type { Component } from 'vue'
 import type { ScoreOrder } from '@/scores/scoreboard'
 import type { GameId } from './ids'
 import SnakePreview from './snake/SnakePreview.vue'
+import TetrisPreview from './tetris/TetrisPreview.vue'
 
 export interface GameInfo {
   id: GameId
@@ -31,6 +32,16 @@ export const GAMES: GameInfo[] = [
     scoreLabel: 'Score',
     preview: SnakePreview,
     load: () => import('./snake/SnakeGame.vue'),
+  },
+  {
+    id: 'tetris',
+    title: 'Tetris',
+    tagline: 'Stack, clear, go for four at once.',
+    color: '--game-tetris',
+    order: 'desc',
+    scoreLabel: 'Score',
+    preview: TetrisPreview,
+    load: () => import('./tetris/TetrisGame.vue'),
   },
 ]
 

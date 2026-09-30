@@ -55,13 +55,20 @@ export interface InputOptions {
   onAction: (action: Action) => void
   /** Continuous swipes: fire a new direction every time the finger travels this far. */
   swipeStep?: number
+  /** Set to false when the game handles keys itself (e.g. to auto-repeat on hold). */
+  keyboard?: boolean
 }
 
 /**
  * One input model for every game: keyboard anywhere on the page, swipes and taps
  * on the game surface. Returns a disposer.
  */
-export function bindInput({ surface, onAction, swipeStep = 28 }: InputOptions): () => void {
+export function bindInput({
+  surface,
+  onAction,
+  swipeStep = 28,
+  keyboard = true,
+}: InputOptions): () => void {
   function onKey(e: KeyboardEvent) {
     if (e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return
     const action = keyToAction(e.key)
@@ -95,7 +102,7 @@ export function bindInput({ surface, onAction, swipeStep = 28 }: InputOptions): 
     start = null
   }
 
-  window.addEventListener('keydown', onKey)
+  if (keyboard) window.addEventListener('keydown', onKey)
   surface?.addEventListener('pointerdown', onPointerDown)
   surface?.addEventListener('pointermove', onPointerMove)
   surface?.addEventListener('pointerup', onPointerUp)

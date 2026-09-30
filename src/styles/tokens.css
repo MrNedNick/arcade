@@ -21,6 +21,15 @@
   --game-sudoku: #ffb547;
   --game-memory: #ff6fb5;
 
+  /* Tetris pieces */
+  --tetris-i: #35d6ff;
+  --tetris-o: #ffd23f;
+  --tetris-t: #b36bff;
+  --tetris-s: #5ee06a;
+  --tetris-z: #ff5a6e;
+  --tetris-j: #4d7cff;
+  --tetris-l: #ff9a3d;
+
   --bg: #0b0d17;
   --bg-glow: rgba(62, 230, 208, 0.08);
   --surface: #141829;
@@ -63,6 +72,13 @@
     --game-minesweeper: #d8402f;
     --game-sudoku: #b86e00;
     --game-memory: #c93a82;
+    --tetris-i: #10a8d6;
+    --tetris-o: #e6b000;
+    --tetris-t: #8a45e6;
+    --tetris-s: #2fb043;
+    --tetris-z: #e23a52;
+    --tetris-j: #3160e6;
+    --tetris-l: #f07a14;
     color-scheme: light;
   }
 }
@@ -89,5 +105,12 @@
   --game-minesweeper: #d8402f;
   --game-sudoku: #b86e00;
   --game-memory: #c93a82;
+  --tetris-i: #10a8d6;
+  --tetris-o: #e6b000;
+  --tetris-t: #8a45e6;
+  --tetris-s: #2fb043;
+  --tetris-z: #e23a52;
+  --tetris-j: #3160e6;
+  --tetris-l: #f07a14;
   color-scheme: light;
 }
