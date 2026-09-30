@@ -1,26 +1,38 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AppDialog from './AppDialog.vue'
-import { GAMES, findGame, formatScore } from '@/games/registry'
+import { GAMES, boardsOf, findGame, formatScore } from '@/games/registry'
 import { scoreBoard } from '@/scores'
 import type { ScoreEntry } from '@/scores/scoreboard'
 
 const open = defineModel<boolean>({ required: true })
-const props = defineProps<{ game?: string; highlightAt?: number }>()
+const props = defineProps<{ game?: string; board?: string; highlightAt?: number }>()
 
-const current = ref(props.game ?? GAMES[0]?.id ?? '')
+const currentGame = ref(props.game ?? GAMES[0]?.id ?? '')
+const currentBoard = ref(props.board ?? currentGame.value)
 const entries = ref<ScoreEntry[]>([])
 
+const shownGame = computed(() => findGame(currentGame.value))
+const boards = computed(() => (shownGame.value ? boardsOf(shownGame.value) : []))
+
 async function load() {
-  entries.value = await scoreBoard.top(current.value)
+  entries.value = await scoreBoard.top(currentBoard.value)
+}
+
+function pickGame(id: string) {
+  currentGame.value = id
+  const g = findGame(id)
+  currentBoard.value = g ? boardsOf(g)[0]!.id : id
 }
 
 watch(open, (isOpen) => {
   if (!isOpen) return
-  current.value = props.game ?? current.value
+  if (props.game) currentGame.value = props.game
+  currentBoard.value =
+    props.board ?? (shownGame.value ? boardsOf(shownGame.value)[0]!.id : currentGame.value)
   void load()
 })
-watch(current, load)
+watch(currentBoard, load)
 
 const dateFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' })
 </script>
@@ -34,12 +46,26 @@ const dateFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short
         type="button"
         role="tab"
         class="tab"
-        :class="{ 'tab--on': g.id === current }"
-        :aria-selected="g.id === current"
+        :class="{ 'tab--on': g.id === currentGame }"
+        :aria-selected="g.id === currentGame"
         :style="{ '--c': `var(${g.color})` }"
-        @click="current = g.id"
+        @click="pickGame(g.id)"
       >
         {{ g.title }}
+      </button>
+    </div>
+    <div v-if="boards.length > 1" class="levels" role="tablist" aria-label="Level">
+      <button
+        v-for="b in boards"
+        :key="b.id"
+        type="button"
+        role="tab"
+        class="level"
+        :class="{ 'level--on': b.id === currentBoard }"
+        :aria-selected="b.id === currentBoard"
+        @click="currentBoard = b.id"
+      >
+        {{ b.label }}
       </button>
     </div>
     <p class="note">Best games on this device.</p>
@@ -55,9 +81,7 @@ const dateFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short
           {{ e.name }}
           <small v-if="e.tag" class="row__tag">{{ e.tag }}</small>
         </span>
-        <span class="row__score">
-          {{ findGame(current) ? formatScore(findGame(current)!, e.score) : e.score }}
-        </span>
+        <span class="row__score">{{ shownGame ? formatScore(shownGame, e.score) : e.score }}</span>
         <span class="row__date">{{ dateFmt.format(e.at) }}</span>
       </li>
     </ol>
@@ -87,6 +111,25 @@ const dateFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short
   color: var(--text);
   border-color: var(--c);
   box-shadow: inset 0 0 0 1px var(--c);
+}
+.levels {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.level {
+  padding: 5px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.level--on {
+  color: var(--text);
+  background: var(--surface);
 }
 .note {
   margin: 0 0 10px;

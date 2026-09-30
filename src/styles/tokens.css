@@ -30,6 +30,18 @@
   --tetris-j: #4d7cff;
   --tetris-l: #ff9a3d;
 
+  /* Minesweeper numbers */
+  --mine-1: #6ea8ff;
+  --mine-2: #5ee06a;
+  --mine-3: #ff6b6b;
+  --mine-4: #c08bff;
+  --mine-5: #ffa45c;
+  --mine-6: #3ee6d0;
+  --mine-7: #eef0ff;
+  --mine-8: #9aa1c4;
+  --tile: #262c4a;
+  --tile-hover: #2f3658;
+
   --bg: #0b0d17;
   --bg-glow: rgba(62, 230, 208, 0.08);
   --surface: #141829;
@@ -79,6 +91,16 @@
     --tetris-z: #e23a52;
     --tetris-j: #3160e6;
     --tetris-l: #f07a14;
+    --mine-1: #1d4ed8;
+    --mine-2: #15803d;
+    --mine-3: #c81e1e;
+    --mine-4: #6d28d9;
+    --mine-5: #9a3412;
+    --mine-6: #0e7490;
+    --mine-7: #141729;
+    --mine-8: #555c7c;
+    --tile: #dde1ef;
+    --tile-hover: #d2d7ea;
     color-scheme: light;
   }
 }
@@ -112,5 +134,15 @@
   --tetris-z: #e23a52;
   --tetris-j: #3160e6;
   --tetris-l: #f07a14;
+  --mine-1: #1d4ed8;
+  --mine-2: #15803d;
+  --mine-3: #c81e1e;
+  --mine-4: #6d28d9;
+  --mine-5: #9a3412;
+  --mine-6: #0e7490;
+  --mine-7: #141729;
+  --mine-8: #555c7c;
+  --tile: #dde1ef;
+  --tile-hover: #d2d7ea;
   color-scheme: light;
 }

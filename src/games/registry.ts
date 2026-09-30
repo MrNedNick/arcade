@@ -3,6 +3,7 @@ import type { ScoreOrder } from '@/scores/scoreboard'
 import type { GameId } from './ids'
 import SnakePreview from './snake/SnakePreview.vue'
 import TetrisPreview from './tetris/TetrisPreview.vue'
+import MinesweeperPreview from './minesweeper/MinesweeperPreview.vue'
 
 export interface GameInfo {
   id: GameId
@@ -20,6 +21,8 @@ export interface GameInfo {
   load: () => Promise<{ default: Component }>
   /** True when an unfinished game can be continued. */
   hasSave?: () => boolean
+  /** Separate top players boards, e.g. one per difficulty. Board id is `${game}:${variant}`. */
+  variants?: { id: string; label: string }[]
 }
 
 export const GAMES: GameInfo[] = [
@@ -43,10 +46,42 @@ export const GAMES: GameInfo[] = [
     preview: TetrisPreview,
     load: () => import('./tetris/TetrisGame.vue'),
   },
+  {
+    id: 'minesweeper',
+    title: 'Minesweeper',
+    tagline: 'Read the numbers, flag the mines, clear the field.',
+    color: '--game-minesweeper',
+    order: 'asc',
+    scoreLabel: 'Time',
+    formatScore: (s) => formatTime(s),
+    preview: MinesweeperPreview,
+    load: () => import('./minesweeper/MinesweeperGame.vue'),
+    variants: [
+      { id: 'easy', label: 'Easy' },
+      { id: 'medium', label: 'Medium' },
+      { id: 'hard', label: 'Hard' },
+    ],
+  },
 ]
 
 export function findGame(id: unknown): GameInfo | undefined {
   return GAMES.find((g) => g.id === id)
+}
+
+/** Every board of a game: its variants, or just the game itself. */
+export function boardsOf(game: GameInfo): { id: string; label: string }[] {
+  return (
+    game.variants?.map((v) => ({ id: `${game.id}:${v.id}`, label: v.label })) ?? [
+      { id: game.id, label: game.title },
+    ]
+  )
+}
+
+/** Minutes and seconds for time-based games; a negative value means "no record yet". */
+export function formatTime(seconds: number): string {
+  if (seconds < 0) return '—'
+  const m = Math.floor(seconds / 60)
+  return `${m}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
 }
 
 export function formatScore(game: GameInfo, value: number): string {

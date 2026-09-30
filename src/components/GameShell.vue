@@ -17,6 +17,14 @@ const props = defineProps<{
   score: number
   /** Short label stored with the score, e.g. the game mode. */
   tag?: string
+  /** Scoreboard to use when a game keeps one per level; defaults to the game id. */
+  board?: string
+  /** False when the finished game does not count, e.g. a lost puzzle. */
+  counts?: boolean
+  /** Heading of the end screen. */
+  overTitle?: string
+  /** Wider layout for big boards. */
+  wide?: boolean
 }>()
 
 const emit = defineEmits<{ start: []; pause: []; resume: []; restart: [] }>()
@@ -24,6 +32,7 @@ const emit = defineEmits<{ start: []; pause: []; resume: []; restart: [] }>()
 const settings = useSettings()
 const root = ref<HTMLElement>()
 const fmt = (n: number) => formatScore(props.game, n)
+const boardId = computed(() => props.board ?? props.game.id)
 
 // ── Best score and the end-of-game result ────────────────────────────
 const best = ref<number | null>(null)
@@ -36,17 +45,22 @@ const showTop = ref(false)
 let pending: { score: number; at: number } | null = null
 
 async function refreshBest() {
-  best.value = (await scoreBoard.top(props.game.id))[0]?.score ?? null
+  best.value = (await scoreBoard.top(boardId.value))[0]?.score ?? null
 }
 onMounted(refreshBest)
+watch(boardId, refreshBest)
 
 const better = (a: number, b: number) => (props.game.order === 'desc' ? a > b : a < b)
+// Only point games light up live; a timer is always "better" at the start.
 const beatingBest = computed(
-  () => props.score > 0 && (best.value === null || better(props.score, best.value)),
+  () =>
+    props.game.order === 'desc' &&
+    props.score > 0 &&
+    (best.value === null || better(props.score, best.value)),
 )
 const shownBest = computed(() => {
   if (props.game.order === 'desc') return Math.max(best.value ?? 0, props.score)
-  return best.value ?? 0
+  return best.value ?? -1
 })
 
 async function submit(name: string) {
@@ -54,7 +68,7 @@ async function submit(name: string) {
   const { score, at } = pending
   pending = null
   askName.value = false
-  const result = await scoreBoard.submit(props.game.id, { name, score, at, tag: props.tag })
+  const result = await scoreBoard.submit(boardId.value, { name, score, at, tag: props.tag })
   rank.value = result.rank
   savedAt.value = at
   if (result.rank === 1) {
@@ -69,9 +83,9 @@ async function submit(name: string) {
 async function onGameOver() {
   rank.value = null
   savedAt.value = undefined
-  if (props.score <= 0) return
+  if (props.score <= 0 || props.counts === false) return
   const at = Date.now()
-  const wouldRank = await scoreBoard.rankFor(props.game.id, props.score)
+  const wouldRank = await scoreBoard.rankFor(boardId.value, props.score)
   if (wouldRank === null) return
   pending = { score: props.score, at }
   if (settings.name) {
@@ -142,7 +156,7 @@ function togglePause() {
   <div
     ref="root"
     class="shell"
-    :class="{ 'shell--fullscreen': isFullscreen }"
+    :class="{ 'shell--fullscreen': isFullscreen, 'shell--wide': wide }"
     :style="{ '--c': `var(${game.color})` }"
   >
     <div class="shell__bar">
@@ -234,7 +248,7 @@ function togglePause() {
           <button type="button" class="btn btn--primary" @click="emit('resume')">Resume</button>
         </div>
         <div v-else-if="status === 'over'" class="overlay overlay--over">
-          <p class="overlay__kicker">Game over</p>
+          <p class="overlay__kicker">{{ overTitle ?? 'Game over' }}</p>
           <p class="overlay__score">{{ fmt(score) }}</p>
           <Transition name="badge" mode="out-in">
             <form v-if="askName" key="ask" class="name" @submit.prevent="saveName">
@@ -268,7 +282,7 @@ function togglePause() {
 
     <slot name="controls" />
 
-    <TopPlayersDialog v-model="showTop" :game="game.id" :highlight-at="savedAt" />
+    <TopPlayersDialog v-model="showTop" :game="game.id" :board="boardId" :highlight-at="savedAt" />
   </div>
 </template>
 
@@ -280,6 +294,9 @@ function togglePause() {
   gap: 14px;
   max-width: 560px;
   margin: 0 auto;
+}
+.shell--wide {
+  max-width: 960px;
 }
 .shell--fullscreen {
   max-width: none;
@@ -347,9 +364,10 @@ function togglePause() {
 }
 .shell__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px 12px;
 }
 .title {
   font-size: clamp(36px, 8vw, 52px);
@@ -359,6 +377,7 @@ function togglePause() {
 .stats {
   display: flex;
   gap: 6px;
+  margin-left: auto;
 }
 .stat {
   display: flex;

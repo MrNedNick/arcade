@@ -1,15 +1,25 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { GAMES, formatScore } from '@/games/registry'
+import { GAMES, boardsOf, formatScore } from '@/games/registry'
 import { scoreBoard } from '@/scores'
 import type { ScoreEntry } from '@/scores/scoreboard'
 
-const leaders = ref<Record<string, ScoreEntry | undefined>>({})
+type Leader = ScoreEntry & { level?: string }
+const leaders = ref<Record<string, Leader | undefined>>({})
+
+/** The leader of the first board that has one; for games with levels, say which. */
+async function leaderOf(game: (typeof GAMES)[number]): Promise<Leader | undefined> {
+  const boards = boardsOf(game)
+  for (const b of boards) {
+    const top = (await scoreBoard.top(b.id))[0]
+    if (top) return { ...top, level: boards.length > 1 ? b.label : undefined }
+  }
+}
 
 onMounted(async () => {
-  const tops = await Promise.all(GAMES.map((g) => scoreBoard.top(g.id)))
-  leaders.value = Object.fromEntries(GAMES.map((g, i) => [g.id, tops[i]?.[0]]))
+  const found = await Promise.all(GAMES.map(leaderOf))
+  leaders.value = Object.fromEntries(GAMES.map((g, i) => [g.id, found[i]]))
 })
 </script>
 
@@ -38,7 +48,8 @@ onMounted(async () => {
                     d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"
                   />
                 </svg>
-                {{ formatScore(g, leaders[g.id]!.score) }} · {{ leaders[g.id]!.name }}
+                {{ formatScore(g, leaders[g.id]!.score) }} · {{ leaders[g.id]!.name
+                }}<template v-if="leaders[g.id]!.level"> · {{ leaders[g.id]!.level }}</template>
               </span>
               <span v-else class="card__best card__best--none">No record yet</span>
               <span class="card__play">{{ g.hasSave?.() ? 'Continue' : 'Play' }}</span>
