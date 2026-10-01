@@ -5,6 +5,7 @@ import SnakePreview from './snake/SnakePreview.vue'
 import TetrisPreview from './tetris/TetrisPreview.vue'
 import MinesweeperPreview from './minesweeper/MinesweeperPreview.vue'
 import SudokuPreview from './sudoku/SudokuPreview.vue'
+import MemoryPreview from './memory/MemoryPreview.vue'
 
 export interface GameInfo {
   id: GameId
@@ -77,6 +78,22 @@ export const GAMES: GameInfo[] = [
       { id: 'easy', label: 'Easy' },
       { id: 'medium', label: 'Medium' },
       { id: 'hard', label: 'Hard' },
+    ],
+  },
+  {
+    id: 'memory',
+    title: 'Memory',
+    tagline: 'Turn two, remember everything, find every pair.',
+    color: '--game-memory',
+    order: 'asc',
+    scoreLabel: 'Time',
+    formatScore: (s) => formatTime(s),
+    preview: MemoryPreview,
+    load: () => import('./memory/MemoryGame.vue'),
+    variants: [
+      { id: 'small', label: '4 × 4' },
+      { id: 'medium', label: '4 × 6' },
+      { id: 'large', label: '6 × 6' },
     ],
   },
 ]
