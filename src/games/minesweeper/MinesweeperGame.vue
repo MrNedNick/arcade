@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import GameShell, { type GameStatus } from '@/components/GameShell.vue'
+import { isPageKey } from '@/engine/input'
 import { findGame } from '@/games/registry'
 import { prefersReducedMotion } from '@/engine/motion'
 import { readJSON, writeJSON } from '@/engine/storage'
@@ -234,7 +235,7 @@ function onContext(i: number, e: MouseEvent) {
 // ── Keyboard: arrows move, Enter/Space dig, F flags ──
 function onKey(e: KeyboardEvent) {
   if (e.metaKey || e.ctrlKey || e.altKey) return
-  if (e.target instanceof HTMLElement && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return
+  if (isPageKey(e)) return
   const k = e.key.toLowerCase()
   if (k === 'p' || k === 'escape') return status.value === 'paused' ? resume() : pause()
   if (k === 'r') return start()

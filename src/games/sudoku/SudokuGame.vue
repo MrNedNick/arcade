@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import GameShell, { type GameStatus } from '@/components/GameShell.vue'
+import { isPageKey } from '@/engine/input'
 import { findGame } from '@/games/registry'
 import { readJSON, writeJSON } from '@/engine/storage'
 import { play } from '@/engine/sfx'
@@ -239,7 +240,7 @@ function select(i: number) {
 // ── Keyboard ──
 function onKey(e: KeyboardEvent) {
   if (e.altKey) return
-  if (e.target instanceof HTMLElement && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return
+  if (isPageKey(e)) return
   const k = e.key.toLowerCase()
   if ((e.metaKey || e.ctrlKey) && k === 'z') {
     e.preventDefault()

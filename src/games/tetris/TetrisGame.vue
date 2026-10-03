@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import GameShell, { type GameStatus } from '@/components/GameShell.vue'
 import { findGame } from '@/games/registry'
-import { bindInput, type Action } from '@/engine/input'
+import { bindInput, type Action, isPageKey } from '@/engine/input'
 import { cssVar, prefersReducedMotion } from '@/engine/motion'
 import { play } from '@/engine/sfx'
 import { loadGame, useAutosave } from '@/engine/save'
@@ -284,7 +284,7 @@ const KEYS: Record<string, Control | 'pause' | 'restart'> = {
 
 function onKeyDown(e: KeyboardEvent) {
   if (e.metaKey || e.ctrlKey || e.altKey) return
-  if (e.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return
+  if (isPageKey(e)) return
   const k = KEYS[e.key.toLowerCase()]
   if (!k) return
   if (e.target instanceof HTMLButtonElement && (e.key === ' ' || e.key === 'Enter')) return

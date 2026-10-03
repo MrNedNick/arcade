@@ -26,7 +26,11 @@ test('lobby → tetris → stack to the top → game over', async ({ page }) => 
   await page.keyboard.press('Enter')
   await expect(page.getByText('New record!')).toBeVisible()
   await page.getByRole('button', { name: 'Top players' }).last().click()
-  await expect(page.getByRole('dialog', { name: 'Top players' }).getByText('Nikita')).toBeVisible()
+  const dialog = page.getByRole('dialog', { name: 'Top players' })
+  await expect(dialog.getByText('Nikita')).toBeVisible()
+  // Escape belongs to the dialog, not to the game's pause key.
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
 })
 
 test('a direct link opens tetris', async ({ page }) => {

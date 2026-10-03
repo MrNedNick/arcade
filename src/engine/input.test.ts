@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { bindInput, keyToAction, swipeDirection, type Action } from './input'
+import { bindInput, isPageKey, keyToAction, swipeDirection, type Action } from './input'
 
 describe('keyToAction', () => {
   it('maps arrows and WASD to directions', () => {
@@ -64,5 +64,22 @@ describe('bindInput', () => {
     fire('pointerdown', 10, 10)
     fire('pointerup', 12, 11)
     expect(onAction).toHaveBeenLastCalledWith('tap')
+  })
+})
+
+describe('keys for the page', () => {
+  it('leaves keys to an open dialog and to text fields', () => {
+    const key = (target: EventTarget) => {
+      const e = new KeyboardEvent('keydown', { key: 'Escape' })
+      Object.defineProperty(e, 'target', { value: target })
+      return e
+    }
+    expect(isPageKey(key(document.body))).toBe(false)
+    expect(isPageKey(key(document.createElement('input')))).toBe(true)
+    const dialog = document.createElement('dialog')
+    dialog.setAttribute('open', '')
+    document.body.append(dialog)
+    expect(isPageKey(key(document.body))).toBe(true)
+    dialog.remove()
   })
 })

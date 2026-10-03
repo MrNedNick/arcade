@@ -44,9 +44,18 @@ export function swipeDirection(dx: number, dy: number, threshold = 24): Directio
   return dy > 0 ? 'down' : 'up'
 }
 
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  return target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)
+/**
+ * Keys that belong to the page rather than the game: typing in a field, or
+ * anything while a dialog is open — Escape there has to close the dialog.
+ */
+export function isPageKey(e: KeyboardEvent): boolean {
+  const t = e.target
+  if (
+    t instanceof HTMLElement &&
+    (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
+  )
+    return true
+  return typeof document !== 'undefined' && document.querySelector('dialog[open]') !== null
 }
 
 export interface InputOptions {
@@ -70,7 +79,7 @@ export function bindInput({
   keyboard = true,
 }: InputOptions): () => void {
   function onKey(e: KeyboardEvent) {
-    if (e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return
+    if (e.metaKey || e.ctrlKey || e.altKey || isPageKey(e)) return
     const action = keyToAction(e.key)
     if (!action) return
     // Buttons already react to Space/Enter themselves.
