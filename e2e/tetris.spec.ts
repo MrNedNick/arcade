@@ -20,6 +20,13 @@ test('lobby → tetris → stack to the top → game over', async ({ page }) => 
   }
   await expect(page.getByText('Game over')).toBeVisible()
   await expect(page.locator('.overlay__score')).not.toHaveText('0')
+
+  // The first score on this device is a record: name it, see it on the board.
+  await page.getByLabel('Top 10! What’s your name?').fill('Nikita')
+  await page.keyboard.press('Enter')
+  await expect(page.getByText('New record!')).toBeVisible()
+  await page.getByRole('button', { name: 'Top players' }).last().click()
+  await expect(page.getByRole('dialog', { name: 'Top players' }).getByText('Nikita')).toBeVisible()
 })
 
 test('a direct link opens tetris', async ({ page }) => {

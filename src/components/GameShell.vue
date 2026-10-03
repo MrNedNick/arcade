@@ -11,25 +11,29 @@ import { play } from '@/engine/sfx'
 
 export type GameStatus = 'ready' | 'playing' | 'paused' | 'over'
 
-const props = defineProps<{
-  game: GameInfo
-  status: GameStatus
-  score: number
-  /** Short label stored with the score, e.g. the game mode. */
-  tag?: string
-  /** Scoreboard to use when a game keeps one per level; defaults to the game id. */
-  board?: string
-  /** False when the finished game does not count, e.g. a lost puzzle. */
-  counts?: boolean
-  /** Heading of the end screen. */
-  overTitle?: string
-  /** Wider layout for big boards. */
-  wide?: boolean
-  /** The paused game was restored from the last visit. */
-  resumed?: boolean
-  /** A line under the final score, e.g. the daily streak. */
-  overNote?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    game: GameInfo
+    status: GameStatus
+    score: number
+    /** Short label stored with the score, e.g. the game mode. */
+    tag?: string
+    /** Scoreboard to use when a game keeps one per level; defaults to the game id. */
+    board?: string
+    /** False when the finished game does not count, e.g. a lost puzzle. */
+    counts?: boolean
+    /** Heading of the end screen. */
+    overTitle?: string
+    /** Wider layout for big boards. */
+    wide?: boolean
+    /** The paused game was restored from the last visit. */
+    resumed?: boolean
+    /** A line under the final score, e.g. the daily streak. */
+    overNote?: string
+  }>(),
+  // An absent boolean prop would read as false; a finished game counts unless told otherwise.
+  { counts: true },
+)
 
 const emit = defineEmits<{ start: []; pause: []; resume: []; restart: [] }>()
 
