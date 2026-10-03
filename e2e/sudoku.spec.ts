@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('lobby → sudoku: a clashing number is marked and undo takes it back', async ({ page }) => {
-  await page.getByRole('link', { name: /Sudoku/ }).click()
+  await page.getByRole('link', { name: /^Sudoku/ }).click()
   await expect(page).toHaveURL(/\/arcade\/sudoku$/)
   await page.getByRole('radio', { name: 'Easy', exact: true }).click()
   await page.getByRole('button', { name: 'Play', exact: true }).click()

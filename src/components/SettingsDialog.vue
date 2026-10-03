@@ -2,10 +2,12 @@
 import { ref, watch } from 'vue'
 import AppDialog from './AppDialog.vue'
 import { cleanName, MAX_NAME, useSettings } from '@/composables/useSettings'
+import { canVibrate, play } from '@/engine/sfx'
 
 const open = defineModel<boolean>({ required: true })
 const settings = useSettings()
 const name = ref(settings.name)
+const vibration = canVibrate()
 
 watch(open, (isOpen) => {
   if (isOpen) name.value = settings.name
@@ -33,11 +35,18 @@ function saveName() {
         />
       </div>
     </form>
-    <label class="switch">
-      <span>Sound</span>
-      <input v-model="settings.sound" type="checkbox" role="switch" />
-      <span class="switch__track" aria-hidden="true" />
-    </label>
+    <div class="switches">
+      <label class="switch">
+        <span>Sound</span>
+        <input v-model="settings.sound" type="checkbox" role="switch" @change="play('tap')" />
+        <span class="switch__track" aria-hidden="true" />
+      </label>
+      <label v-if="vibration" class="switch">
+        <span>Vibration</span>
+        <input v-model="settings.haptics" type="checkbox" role="switch" @change="play('flag')" />
+        <span class="switch__track" aria-hidden="true" />
+      </label>
+    </div>
   </AppDialog>
 </template>
 
@@ -63,6 +72,10 @@ function saveName() {
 .input:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+.switches {
+  display: grid;
+  gap: 16px;
 }
 .switch {
   position: relative;

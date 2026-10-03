@@ -5,8 +5,11 @@ import { findGame } from '@/games/registry'
 import { prefersReducedMotion } from '@/engine/motion'
 import { readJSON, writeJSON } from '@/engine/storage'
 import { play } from '@/engine/sfx'
+import { loadGame, useAutosave } from '@/engine/save'
+import { useDaily } from '@/composables/useDaily'
 import {
   createGame,
+  dailyGame,
   flagsLeft,
   LEVELS,
   reveal,
@@ -56,27 +59,97 @@ function orientedLevel(): { rows: number; cols: number; mines: number } {
     : { rows: l.rows, cols: l.cols, mines: l.mines }
 }
 
+// ── Daily puzzle: medium, the same mines for everyone on a date ──
+const daily = useDaily('minesweeper')
+const DAILY_LEVEL: Level['id'] = 'medium'
+const playingDaily = ref(false)
+const boardId = computed(() =>
+  playingDaily.value ? 'minesweeper:daily' : `minesweeper:${levelId.value}`,
+)
+const overNote = computed(() => {
+  if (!playingDaily.value) return undefined
+  if (outcome.value !== 'won') return 'Same board all day — try again'
+  return ['Daily puzzle solved', daily.streakText.value].filter(Boolean).join(' · ')
+})
+function pickLevel(id: Level['id']) {
+  levelId.value = id
+  daily.on.value = false
+}
+
+// ── Unfinished game: saved when the player leaves, offered back on return ──
+interface Saved {
+  game: MinesState
+  level: Level['id']
+  daily: string | null
+  elapsed: number
+}
+const resumed = ref(false)
+const { flush } = useAutosave<Saved>('minesweeper', () => {
+  if (status.value === 'ready') return undefined
+  if (status.value === 'over' || game.value.outcome !== 'playing') return null
+  if (!startedAt) return undefined
+  tickTimer()
+  return {
+    game: game.value,
+    level: levelId.value,
+    daily: playingDaily.value ? daily.date.value : null,
+    elapsed: elapsed.value,
+  }
+})
+function restore() {
+  const saved = loadGame<Saved>('minesweeper')
+  const g = saved?.game
+  if (!saved || !g || g.outcome !== 'playing' || g.cells?.length !== g.rows * g.cols) return
+  if (daily.on.value && saved.daily !== daily.date.value) return
+  game.value = g
+  levelId.value = saved.level
+  playingDaily.value = saved.daily !== null
+  daily.on.value = playingDaily.value
+  if (saved.daily) daily.date.value = saved.daily
+  elapsed.value = saved.elapsed
+  pausedAt = performance.now()
+  startedAt = pausedAt - saved.elapsed * 1000
+  pausedTotal = 0
+  focusIndex.value = Math.floor(g.rows / 2) * g.cols + Math.floor(g.cols / 2)
+  resumed.value = true
+  status.value = 'paused'
+}
+
 function start() {
-  const o = orientedLevel()
+  resumed.value = false
+  playingDaily.value = daily.on.value
+  let o = orientedLevel()
   game.value = createGame(o.rows, o.cols, o.mines)
-  delays.value = new Map()
+  if (playingDaily.value) {
+    const lvl = LEVELS.find((l) => l.id === DAILY_LEVEL)!
+    o = lvl
+    const d = dailyGame(lvl, daily.random())
+    // The daily board starts with its first area already open.
+    const { state, opened } = reveal(d.state, d.start)
+    game.value = state
+    delays.value = new Map(opened.map((x) => [x.index, Math.min(x.distance, WAVE_MAX)]))
+  } else delays.value = new Map()
   shake.value = false
   flagMode.value = false
   elapsed.value = 0
   startedAt = pausedTotal = pausedAt = 0
+  // The daily board is already open, so its clock runs from the first second.
+  if (playingDaily.value) startedAt = performance.now()
   focusIndex.value = Math.floor(o.rows / 2) * o.cols + Math.floor(o.cols / 2)
   status.value = 'playing'
-  play('tap')
+  play('start')
 }
 function pause() {
   if (status.value !== 'playing' || game.value.outcome !== 'playing') return
   pausedAt = performance.now()
   status.value = 'paused'
+  flush()
 }
 function resume() {
   if (status.value !== 'paused') return
   if (pausedAt) pausedTotal += performance.now() - pausedAt
   pausedAt = 0
+  resumed.value = false
   status.value = 'playing'
 }
 
@@ -96,10 +169,8 @@ function finish(outcome: 'won' | 'lost', from: number) {
   if (outcome === 'lost') {
     shake.value = !prefersReducedMotion()
     play('crash')
-    navigator.vibrate?.([40, 30, 80])
   } else {
-    play('record')
-    navigator.vibrate?.([15, 30, 15])
+    play('win')
   }
   endTimer = window.setTimeout(() => (status.value = 'over'), END_MS)
 }
@@ -114,9 +185,12 @@ function doReveal(i: number) {
   game.value = state
   if (state.outcome === 'playing') {
     delays.value = new Map(opened.map((o) => [o.index, Math.min(o.distance, WAVE_MAX)]))
-    play(opened.length > 1 ? 'eat' : 'tap')
+    play(opened.length > 1 ? 'cascade' : 'reveal')
   }
-  if (state.outcome === 'won') elapsed.value = Math.max(1, elapsed.value)
+  if (state.outcome === 'won') {
+    elapsed.value = Math.max(1, elapsed.value)
+    if (playingDaily.value) daily.solved(elapsed.value)
+  }
   if (state.outcome !== 'playing') finish(state.outcome, state.exploded ?? i)
 }
 
@@ -125,8 +199,7 @@ function doFlag(i: number) {
   const next = toggleFlag(game.value, i)
   if (next === game.value) return
   game.value = next
-  play('tap')
-  navigator.vibrate?.(10)
+  play(next.cells[i]!.flag ? 'flag' : 'unflag')
 }
 
 // ── Pointer: click digs, right click or long press flags, flag mode swaps them ──
@@ -196,6 +269,7 @@ function onKey(e: KeyboardEvent) {
 const cellEls = ref<HTMLButtonElement[]>([])
 
 onMounted(() => {
+  restore()
   window.addEventListener('keydown', onKey)
   timerId = window.setInterval(tickTimer, 250)
 })
@@ -207,7 +281,12 @@ onBeforeUnmount(() => {
 })
 
 const outcome = computed(() => game.value.outcome)
-const minesLeft = computed(() => (outcome.value === 'won' ? 0 : flagsLeft(game.value)))
+const minesLeft = computed(() => {
+  if (status.value === 'ready') {
+    return daily.on.value ? LEVELS.find((l) => l.id === DAILY_LEVEL)!.mines : level.value.mines
+  }
+  return outcome.value === 'won' ? 0 : flagsLeft(game.value)
+})
 
 function label(i: number): string {
   const g = game.value
@@ -225,10 +304,12 @@ function label(i: number): string {
     :game="info"
     :status="status"
     :score="elapsed"
-    :board="`minesweeper:${levelId}`"
-    :counts="outcome === 'won'"
-    :over-title="outcome === 'won' ? 'Cleared!' : 'Boom'"
-    :wide="levelId === 'hard'"
+    :board="boardId"
+    :counts="outcome === 'won' && !playingDaily"
+    :over-title="outcome === 'won' ? (playingDaily ? 'Daily cleared!' : 'Cleared!') : 'Boom'"
+    :over-note="overNote"
+    :wide="levelId === 'hard' && !playingDaily"
+    :resumed="resumed"
     @start="start"
     @pause="pause"
     @resume="resume"
@@ -252,7 +333,7 @@ function label(i: number): string {
         }"
         :style="{ '--cols': game.cols, '--rows': game.rows }"
         role="grid"
-        :aria-label="`Minesweeper, ${level.label}, ${minesLeft} mines left`"
+        :aria-label="`Minesweeper, ${playingDaily ? 'Daily' : level.label}, ${minesLeft} mines left`"
       >
         <button
           v-for="(c, i) in game.cells"
@@ -310,13 +391,24 @@ function label(i: number): string {
           type="button"
           role="radio"
           class="level"
-          :aria-checked="levelId === l.id"
-          @click="levelId = l.id"
+          :aria-checked="!daily.on.value && levelId === l.id"
+          @click="pickLevel(l.id)"
         >
           {{ l.label }}
           <small>{{ l.rows }}×{{ l.cols }} · {{ l.mines }}</small>
         </button>
+        <button
+          type="button"
+          role="radio"
+          class="level level--daily"
+          :aria-checked="daily.on.value"
+          @click="daily.on.value = true"
+        >
+          <span><span class="star" aria-hidden="true">★</span> Daily</span>
+          <small>16×16 · 40</small>
+        </button>
       </div>
+      <p v-if="daily.on.value" class="daily-note">{{ daily.intro.value }}</p>
     </template>
     <template #hint>
       <p class="hint hint--keys">
@@ -567,6 +659,15 @@ function label(i: number): string {
   border: 1px solid var(--border);
   color: var(--text-muted);
   transition: all var(--t) ease;
+}
+.star {
+  color: var(--gold);
+}
+.daily-note {
+  margin: -4px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 .level small {
   font-weight: 500;

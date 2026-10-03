@@ -172,3 +172,16 @@ export function toggleFlag(s: MinesState, i: number): MinesState {
 export function flagsLeft(s: MinesState): number {
   return s.mines - s.cells.filter((c) => c.flag).length
 }
+
+/**
+ * A board fixed in advance, for the daily puzzle: the mines depend only on the
+ * random source, and the game opens from a known empty cell near the centre so
+ * everyone starts from the same first move.
+ */
+export function dailyGame(level: Level, random: Random): { state: MinesState; start: number } {
+  const blank = createGame(level.rows, level.cols, level.mines)
+  const r = Math.floor(level.rows / 4 + random() * (level.rows / 2))
+  const c = Math.floor(level.cols / 4 + random() * (level.cols / 2))
+  const start = r * level.cols + c
+  return { state: layMines(blank, start, random), start }
+}

@@ -5,10 +5,12 @@ export interface Settings {
   /** Player name used on the top players board. Empty until the first record. */
   name: string
   sound: boolean
+  /** Short vibrations on phones that support them. */
+  haptics: boolean
 }
 
 const KEY = 'arcade:settings'
-const DEFAULTS: Settings = { name: '', sound: true }
+const DEFAULTS: Settings = { name: '', sound: true, haptics: true }
 
 const settings = reactive<Settings>({ ...DEFAULTS, ...readJSON<Partial<Settings>>(KEY, {}) })
 

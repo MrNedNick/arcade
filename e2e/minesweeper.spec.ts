@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('lobby → minesweeper: the first dig is always safe and opens an area', async ({ page }) => {
-  await page.getByRole('link', { name: /Minesweeper/ }).click()
+  await page.getByRole('link', { name: /^Minesweeper/ }).click()
   await expect(page).toHaveURL(/\/arcade\/minesweeper$/)
   await page.getByRole('radio', { name: /Easy/ }).click()
   await page.getByRole('button', { name: 'Play', exact: true }).click()

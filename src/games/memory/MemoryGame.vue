@@ -5,6 +5,7 @@ import { findGame } from '@/games/registry'
 import { readJSON, writeJSON } from '@/engine/storage'
 import { prefersReducedMotion } from '@/engine/motion'
 import { play } from '@/engine/sfx'
+import { loadGame, useAutosave } from '@/engine/save'
 import {
   DECKS,
   deal,
@@ -63,7 +64,43 @@ function clearTimers() {
   timers.clear()
 }
 
+// ── Unfinished game: saved when the player leaves, offered back on return ──
+interface Saved {
+  game: MemoryState
+  size: Size['id']
+  deck: string
+  elapsed: number
+}
+const resumed = ref(false)
+const { flush } = useAutosave<Saved>('memory', () => {
+  if (status.value === 'ready') return undefined
+  if (status.value === 'over' || won.value) return null
+  if (!startedAt) return undefined
+  tickTimer()
+  return {
+    game: hideMiss(game.value),
+    size: sizeId.value,
+    deck: deckId.value,
+    elapsed: elapsed.value,
+  }
+})
+function restore() {
+  const saved = loadGame<Saved>('memory')
+  const sz = SIZES.find((s) => s.id === saved?.size)
+  if (!saved || !sz || saved.game?.cards?.length !== sz.cols * sz.rows || isWon(saved.game)) return
+  sizeId.value = sz.id
+  deckId.value = saved.deck
+  game.value = { ...saved.game, open: [] }
+  elapsed.value = saved.elapsed
+  pausedAt = performance.now()
+  startedAt = pausedAt - saved.elapsed * 1000
+  pausedTotal = 0
+  resumed.value = true
+  status.value = 'paused'
+}
+
 function start() {
+  resumed.value = false
   clearTimers()
   const pairs = (size.value.cols * size.value.rows) / 2
   game.value = deal(deck.value.faces, pairs, Math.random)
@@ -75,17 +112,19 @@ function start() {
   elapsed.value = 0
   startedAt = pausedTotal = pausedAt = 0
   status.value = 'playing'
-  play('tap')
+  play('start')
 }
 function pause() {
   if (status.value !== 'playing' || won.value) return
   pausedAt = performance.now()
   status.value = 'paused'
+  flush()
 }
 function resume() {
   if (status.value !== 'paused') return
   if (pausedAt) pausedTotal += performance.now() - pausedAt
   pausedAt = 0
+  resumed.value = false
   status.value = 'playing'
 }
 
@@ -106,18 +145,20 @@ function tap(i: number) {
   showFace.add(i)
   if (closing.length) turnDown(closing)
 
-  if (result === 'first') play('tap')
+  if (result === 'first') play('flip')
   if (result === 'match') {
     const pair = [before.open[0]!, i]
     pair.forEach((k) => bump.add(k))
     later(() => pair.forEach((k) => bump.delete(k)), 600)
-    play('eat')
-    navigator.vibrate?.(12)
+    play('match')
     if (isWon(state)) finish()
   }
   if (result === 'miss') {
     const pair = [...state.open]
-    later(() => pair.forEach((k) => shake.add(k)), 380)
+    later(() => {
+      pair.forEach((k) => shake.add(k))
+      play('miss')
+    }, 380)
     later(() => pair.forEach((k) => shake.delete(k)), 780)
     missTimer = window.setTimeout(() => {
       if (game.value.open.length === 2) {
@@ -132,8 +173,7 @@ function finish() {
   won.value = true
   tickTimer()
   elapsed.value = Math.max(1, elapsed.value)
-  play('record')
-  navigator.vibrate?.([15, 30, 15])
+  play('win')
   // After a beat, every card flies off in its own direction.
   later(() => {
     if (prefersReducedMotion()) return
@@ -169,6 +209,7 @@ function onKey(e: KeyboardEvent) {
 }
 
 onMounted(() => {
+  restore()
   window.addEventListener('keydown', onKey)
   timerId = window.setInterval(tickTimer, 250)
 })
@@ -192,6 +233,7 @@ const total = computed(() => game.value.cards.length / 2)
     :tag="`${game.moves} moves`"
     :counts="won"
     over-title="All pairs found!"
+    :resumed="resumed"
     @start="start"
     @pause="pause"
     @resume="resume"

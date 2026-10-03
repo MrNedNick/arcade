@@ -5,6 +5,7 @@ import { findGame } from '@/games/registry'
 import { bindInput, type Action } from '@/engine/input'
 import { cssVar, prefersReducedMotion } from '@/engine/motion'
 import { play } from '@/engine/sfx'
+import { loadGame, useAutosave } from '@/engine/save'
 import { useTheme } from '@/composables/useTheme'
 import {
   COLS,
@@ -88,8 +89,30 @@ function readColors() {
 const { theme } = useTheme()
 watch(theme, () => requestAnimationFrame(readColors))
 
+// ── Unfinished game: saved when the player leaves, offered back on return ──
+interface Saved {
+  game: TetrisState
+}
+const resumed = ref(false)
+const { flush } = useAutosave<Saved>('tetris', () => {
+  if (status.value === 'ready') return undefined
+  return status.value !== 'over' && !overAt && !game.value.over ? { game: game.value } : null
+})
+function restore() {
+  const saved = loadGame<Saved>('tetris')
+  const g = saved?.game
+  if (!g || g.over || g.board?.length !== ROWS || !g.active || !g.queue?.length) return
+  game.value = g
+  score.value = g.score
+  shownX = g.active.x
+  shownY = g.active.y
+  resumed.value = true
+  status.value = 'paused'
+}
+
 // ── Game flow ──
 function start() {
+  resumed.value = false
   stopRepeat()
   game.value = createGame()
   score.value = 0
@@ -100,16 +123,18 @@ function start() {
   shownY = game.value.active.y
   status.value = 'playing'
   last = performance.now()
-  play('tap')
+  play('start')
 }
 function pause() {
   if (status.value !== 'playing' || overAt) return
   stopRepeat()
   status.value = 'paused'
+  flush()
 }
 function resume() {
   if (status.value !== 'paused') return
   last = performance.now()
+  resumed.value = false
   status.value = 'playing'
 }
 
@@ -139,7 +164,7 @@ function handle(events: TetrisEvent[]) {
     if (e.type === 'lock') {
       flash = { cells: e.cells, at: now }
       if (!dropped) bump = { at: now, power: 0.3 }
-      play('tap')
+      play(dropped ? 'drop' : 'lock')
     }
     if (e.type === 'clear') {
       clearing = { rows: e.rows, preBoard: e.preBoard, at: now }
@@ -160,10 +185,11 @@ function handle(events: TetrisEvent[]) {
                 color: colors.piece[e.preBoard[y]![x]!],
               })
       }
-      play(n === 4 ? 'record' : 'eat')
-      navigator.vibrate?.(n === 4 ? [20, 30, 40] : 12)
+      play(n === 4 ? 'tetris' : 'line')
     }
     if (e.type === 'levelUp') {
+      // A level always comes with a line clear: let that sound finish first.
+      window.setTimeout(() => play('level'), 260)
       banner = banner?.text
         ? { ...banner, sub: `Level ${e.level}` }
         : { text: `Level ${e.level}`, at: now, big: false }
@@ -172,7 +198,6 @@ function handle(events: TetrisEvent[]) {
       overAt = now
       stopRepeat()
       play('crash')
-      navigator.vibrate?.([30, 40, 60])
     }
   }
 }
@@ -186,21 +211,26 @@ function act(c: Control) {
   const g = game.value
   switch (c) {
     case 'left':
-      return apply(move(g, -1))
-    case 'right':
-      return apply(move(g, 1))
+    case 'right': {
+      const next = move(g, c === 'left' ? -1 : 1)
+      if (next.active !== g.active) play('move')
+      return apply(next)
+    }
     case 'down':
       return apply(softDrop(g))
     case 'cw':
-      return apply(rotate(g, 1))
-    case 'ccw':
-      return apply(rotate(g, -1))
+    case 'ccw': {
+      const next = rotate(g, c === 'cw' ? 1 : -1)
+      if (next.active !== g.active) play('rotate')
+      return apply(next)
+    }
     case 'drop': {
       const r = hardDrop(g)
       return apply(r.state, r.events)
     }
     case 'hold': {
       const h = hold(g)
+      if (h !== g) play('hold')
       apply(h)
       shownX = h.active.x
       shownY = h.active.y
@@ -622,6 +652,7 @@ onMounted(() => {
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('blur', stopRepeat)
   unbind = bindInput({ surface: canvas.value, onAction: onGesture, keyboard: false, swipeStep: 26 })
+  restore()
   last = lastDraw = performance.now()
   rafId = requestAnimationFrame(frame)
 })
@@ -661,6 +692,7 @@ const ICONS: Record<Control, string> = {
     :game="info"
     :status="status"
     :score="score"
+    :resumed="resumed"
     @start="start"
     @pause="pause"
     @resume="resume"

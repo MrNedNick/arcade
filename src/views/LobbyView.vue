@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { GAMES, boardsOf, formatScore } from '@/games/registry'
+import { GAMES, boardsOf, findGame, formatScore, formatTime } from '@/games/registry'
+import { hasSave } from '@/engine/save'
+import { DAILY_GAMES, dailyResult, streak } from '@/engine/daily'
 import { scoreBoard } from '@/scores'
 import type { ScoreEntry } from '@/scores/scoreboard'
 
@@ -17,6 +19,11 @@ async function leaderOf(game: (typeof GAMES)[number]): Promise<Leader | undefine
   }
 }
 
+const dailies = computed(() =>
+  DAILY_GAMES.map((id) => ({ game: findGame(id)!, result: dailyResult(id) })),
+)
+const days = computed(() => streak())
+
 onMounted(async () => {
   const found = await Promise.all(GAMES.map(leaderOf))
   leaders.value = Object.fromEntries(GAMES.map((g, i) => [g.id, found[i]]))
@@ -29,6 +36,41 @@ onMounted(async () => {
       <h1 class="hero__title">Arcade</h1>
       <p class="hero__lead">Free games. No ads, no sign-up.</p>
     </header>
+
+    <section class="daily" aria-labelledby="daily-title">
+      <div class="daily__head">
+        <h2 id="daily-title" class="daily__title">Daily puzzles</h2>
+        <span v-if="days" class="daily__streak">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3-1-3 0-6 1-8.5z"
+            />
+          </svg>
+          {{ days === 1 ? '1-day streak' : `${days} days in a row` }}
+        </span>
+        <span v-else class="daily__sub">Same puzzle for everyone, new one every day</span>
+      </div>
+      <div class="daily__list">
+        <RouterLink
+          v-for="d in dailies"
+          :key="d.game.id"
+          :to="{ path: `/${d.game.id}`, query: { daily: null } }"
+          class="daily__item"
+          :aria-label="`Daily ${d.game.title}: ${d.result !== null ? `solved in ${formatTime(d.result)}` : 'play today’s puzzle'}`"
+          :class="{ 'daily__item--done': d.result !== null }"
+          :style="{ '--c': `var(${d.game.color})` }"
+        >
+          <span class="daily__game">{{ d.game.title }}</span>
+          <span class="daily__state">
+            <template v-if="d.result !== null">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+              Solved in {{ formatTime(d.result) }}
+            </template>
+            <template v-else>Play today’s</template>
+          </span>
+        </RouterLink>
+      </div>
+    </section>
 
     <ul class="grid" role="list">
       <li v-for="(g, i) in GAMES" :key="g.id" class="grid__item" :style="{ '--i': i }">
@@ -52,7 +94,7 @@ onMounted(async () => {
                 }}<template v-if="leaders[g.id]!.level"> · {{ leaders[g.id]!.level }}</template>
               </span>
               <span v-else class="card__best card__best--none">No record yet</span>
-              <span class="card__play">{{ g.hasSave?.() ? 'Continue' : 'Play' }}</span>
+              <span class="card__play">{{ hasSave(g.id) ? 'Continue' : 'Play' }}</span>
             </div>
           </div>
         </RouterLink>
@@ -88,6 +130,89 @@ onMounted(async () => {
   margin: 6px 0 0;
   font-size: clamp(17px, 2.4vw, 21px);
   color: var(--text-muted);
+}
+.daily {
+  margin: 0 0 22px;
+}
+.daily__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+.daily__title {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.daily__sub {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.daily__streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.daily__streak svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+.daily__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.daily__item {
+  --c: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px 12px 16px;
+  border-radius: 14px;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--c);
+  transition:
+    transform var(--t) var(--ease-spring),
+    border-color var(--t) ease;
+}
+.daily__item:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--c) 55%, transparent);
+  border-left-color: var(--c);
+}
+.daily__item:active {
+  transform: scale(0.98);
+}
+.daily__game {
+  font-weight: 700;
+}
+.daily__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.daily__item--done .daily__state {
+  color: var(--text);
+}
+.daily__state svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .grid {
   list-style: none;

@@ -6,6 +6,7 @@ import { bindInput, type Action, type Direction } from '@/engine/input'
 import { cssVar, prefersReducedMotion } from '@/engine/motion'
 import { readJSON, writeJSON } from '@/engine/storage'
 import { play } from '@/engine/sfx'
+import { loadGame, useAutosave } from '@/engine/save'
 import { useTheme } from '@/composables/useTheme'
 import { createGame, step, stepMs, turn, type Cell, type SnakeState } from './logic'
 
@@ -56,8 +57,30 @@ function readColors() {
 const { theme } = useTheme()
 watch(theme, () => requestAnimationFrame(readColors))
 
+// ── Unfinished game: saved when the player leaves, offered back on return ──
+interface Saved {
+  game: SnakeState
+}
+const resumed = ref(false)
+const { flush } = useAutosave<Saved>('snake', () => {
+  if (status.value === 'ready') return undefined
+  return status.value !== 'over' && game.value.alive && !diedAt ? { game: game.value } : null
+})
+function restore() {
+  const saved = loadGame<Saved>('snake')
+  if (!saved?.game?.alive || saved.game.cols !== COLS || saved.game.rows !== ROWS) return
+  game.value = saved.game
+  prevBody = saved.game.body
+  score.value = saved.game.score
+  pausedAt = lastStepAt = performance.now()
+  foodBornAt = 0
+  resumed.value = true
+  status.value = 'paused'
+}
+
 // ── Game flow ──
 function start() {
+  resumed.value = false
   game.value = createGame({ cols: COLS, rows: ROWS, wrap: wrap.value })
   prevBody = game.value.body
   score.value = 0
@@ -68,19 +91,21 @@ function start() {
   lastStepAt = now
   foodBornAt = now
   status.value = 'playing'
-  play('tap')
+  play('start')
 }
 
 function pause() {
   if (status.value !== 'playing') return
   status.value = 'paused'
   pausedAt = performance.now()
+  flush()
 }
 
 function resume() {
   if (status.value !== 'paused') return
   // Shift the clock so the snake continues exactly where it stopped.
   lastStepAt += performance.now() - pausedAt
+  resumed.value = false
   status.value = 'playing'
 }
 
@@ -124,12 +149,10 @@ function advance(now: number) {
     burst(g.food, now)
     foodBornAt = now
     play('eat')
-    navigator.vibrate?.(8)
   }
   if (result.events.includes('die')) {
     diedAt = now
     play('crash')
-    navigator.vibrate?.([30, 40, 60])
   }
 }
 
@@ -389,6 +412,7 @@ onMounted(() => {
   observer = new ResizeObserver(resize)
   if (canvas.value) observer.observe(canvas.value)
   unbind = bindInput({ surface: canvas.value, onAction })
+  restore()
   rafId = requestAnimationFrame(frame)
 })
 
@@ -411,6 +435,7 @@ function padPress(dir: Direction, e: PointerEvent) {
     :status="status"
     :score="score"
     :tag="game.wrap ? 'wrap' : undefined"
+    :resumed="resumed"
     @start="start"
     @pause="pause"
     @resume="resume"

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   chord,
   createGame,
+  dailyGame,
   flagsLeft,
   LEVELS,
   layMines,
@@ -114,5 +115,31 @@ describe('mine layout', () => {
     const s = layMines(createGame(9, 9, 10), 40, seeded(3))
     for (let i = 0; i < s.cells.length; i++)
       expect(s.cells[i]!.adj).toBe(neighbours(s, i).filter((n) => s.cells[n]!.mine).length)
+  })
+})
+
+describe('daily board', () => {
+  const medium = LEVELS.find((l) => l.id === 'medium')!
+  const mines = (s: MinesState) => s.cells.flatMap((c, i) => (c.mine ? [i] : []))
+
+  it('is the same for the same seed and different for another', () => {
+    const a = dailyGame(medium, seeded(42))
+    const b = dailyGame(medium, seeded(42))
+    const c = dailyGame(medium, seeded(43))
+    expect(mines(a.state)).toEqual(mines(b.state))
+    expect(a.start).toBe(b.start)
+    expect(mines(a.state)).not.toEqual(mines(c.state))
+  })
+
+  it('opens an empty area from the start cell', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const { state, start } = dailyGame(medium, seeded(seed))
+      expect(mines(state)).toHaveLength(40)
+      expect(state.cells[start]!.mine).toBe(false)
+      expect(state.cells[start]!.adj).toBe(0)
+      const { state: after, opened } = reveal(state, start)
+      expect(after.outcome).toBe('playing')
+      expect(opened.length).toBeGreaterThan(1)
+    }
   })
 })

@@ -102,3 +102,11 @@ describe('play', () => {
     expect(any.state.values[any.cell]).toBe(solve(PUZZLE)![any.cell])
   })
 })
+
+describe('daily puzzle', () => {
+  it('generates the same grid from the same seed', () => {
+    const level = LEVELS[1]!
+    expect(generate(level, seeded(2026_10_03))).toEqual(generate(level, seeded(2026_10_03)))
+    expect(generate(level, seeded(1)).puzzle).not.toEqual(generate(level, seeded(2)).puzzle)
+  })
+})

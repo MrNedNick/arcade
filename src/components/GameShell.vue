@@ -25,6 +25,10 @@ const props = defineProps<{
   overTitle?: string
   /** Wider layout for big boards. */
   wide?: boolean
+  /** The paused game was restored from the last visit. */
+  resumed?: boolean
+  /** A line under the final score, e.g. the daily streak. */
+  overNote?: string
 }>()
 
 const emit = defineEmits<{ start: []; pause: []; resume: []; restart: [] }>()
@@ -146,6 +150,11 @@ onBeforeUnmount(() => {
   if (pending) void submit(settings.name || 'Player')
 })
 
+function toggleSound() {
+  settings.sound = !settings.sound
+  play('tap')
+}
+
 function togglePause() {
   if (props.status === 'playing') emit('pause')
   else if (props.status === 'paused') emit('resume')
@@ -195,7 +204,7 @@ function togglePause() {
           class="tool"
           :aria-label="settings.sound ? 'Mute sound' : 'Turn sound on'"
           :aria-pressed="settings.sound"
-          @click="settings.sound = !settings.sound"
+          @click="toggleSound"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 9v6h4l5 4V5L8 9z" class="fill" />
@@ -244,12 +253,21 @@ function togglePause() {
           <slot name="hint" />
         </div>
         <div v-else-if="status === 'paused'" class="overlay">
-          <p class="overlay__title">Paused</p>
-          <button type="button" class="btn btn--primary" @click="emit('resume')">Resume</button>
+          <p class="overlay__title">{{ resumed ? 'Welcome back' : 'Paused' }}</p>
+          <p v-if="resumed" class="overlay__sub">Your last game is right where you left it.</p>
+          <div class="overlay__actions">
+            <button type="button" class="btn btn--primary" @click="emit('resume')">
+              {{ resumed ? 'Continue' : 'Resume' }}
+            </button>
+            <button v-if="resumed" type="button" class="btn" @click="emit('restart')">
+              New game
+            </button>
+          </div>
         </div>
         <div v-else-if="status === 'over'" class="overlay overlay--over">
           <p class="overlay__kicker">{{ overTitle ?? 'Game over' }}</p>
           <p class="overlay__score">{{ fmt(score) }}</p>
+          <p v-if="overNote" class="overlay__sub">{{ overNote }}</p>
           <Transition name="badge" mode="out-in">
             <form v-if="askName" key="ask" class="name" @submit.prevent="saveName">
               <label for="shell-name" class="name__label">Top 10! What’s your name?</label>
@@ -448,6 +466,11 @@ function togglePause() {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+.overlay__sub {
+  margin: -6px 0 0;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 .overlay__score {
   margin: -8px 0 0;

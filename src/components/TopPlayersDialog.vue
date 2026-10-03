@@ -28,8 +28,14 @@ function pickGame(id: string) {
 watch(open, (isOpen) => {
   if (!isOpen) return
   if (props.game) currentGame.value = props.game
+  // A board without a table of its own (the daily puzzle) opens the game's first one.
+  const known = boards.value.some((b) => b.id === props.board)
   currentBoard.value =
-    props.board ?? (shownGame.value ? boardsOf(shownGame.value)[0]!.id : currentGame.value)
+    props.board && known
+      ? props.board
+      : shownGame.value
+        ? boardsOf(shownGame.value)[0]!.id
+        : currentGame.value
   void load()
 })
 watch(currentBoard, load)

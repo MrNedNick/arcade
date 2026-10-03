@@ -4,6 +4,8 @@ import GameShell, { type GameStatus } from '@/components/GameShell.vue'
 import { findGame } from '@/games/registry'
 import { readJSON, writeJSON } from '@/engine/storage'
 import { play } from '@/engine/sfx'
+import { loadGame, useAutosave } from '@/engine/save'
+import { useDaily } from '@/composables/useDaily'
 import {
   boxOf,
   colOf,
@@ -57,8 +59,66 @@ function tickTimer() {
   elapsed.value = Math.floor((performance.now() - startedAt - pausedTotal) / 1000) + penalty.value
 }
 
+// ── Daily puzzle: medium, the same grid for everyone on a date ──
+const daily = useDaily('sudoku')
+const DAILY_LEVEL: Level['id'] = 'medium'
+const playingDaily = ref(false)
+const boardId = computed(() => (playingDaily.value ? 'sudoku:daily' : `sudoku:${levelId.value}`))
+const overNote = computed(() => {
+  if (!playingDaily.value) return undefined
+  return ['Daily puzzle solved', daily.streakText.value].filter(Boolean).join(' · ')
+})
+function pickLevel(id: Level['id']) {
+  levelId.value = id
+  daily.on.value = false
+}
+
+// ── Unfinished game: saved when the player leaves, offered back on return ──
+interface Saved {
+  game: SudokuState
+  level: Level['id']
+  daily: string | null
+  elapsed: number
+  penalty: number
+}
+const resumed = ref(false)
+const { flush } = useAutosave<Saved>('sudoku', () => {
+  if (status.value === 'ready') return undefined
+  if (status.value === 'over' || solved.value) return null
+  tickTimer()
+  return {
+    game: game.value,
+    level: levelId.value,
+    daily: playingDaily.value ? daily.date.value : null,
+    elapsed: elapsed.value,
+    penalty: penalty.value,
+  }
+})
+function restore() {
+  const saved = loadGame<Saved>('sudoku')
+  if (!saved || saved.game?.values?.length !== 81 || isSolved(saved.game)) return
+  // Opening today's daily from the lobby skips an unrelated unfinished game.
+  if (daily.on.value && saved.daily !== daily.date.value) return
+  game.value = saved.game
+  levelId.value = saved.level
+  playingDaily.value = saved.daily !== null
+  daily.on.value = playingDaily.value
+  if (saved.daily) daily.date.value = saved.daily
+  selected.value = saved.game.values.findIndex((v) => v === 0)
+  penalty.value = saved.penalty
+  elapsed.value = saved.elapsed
+  pausedAt = performance.now()
+  startedAt = pausedAt - (saved.elapsed - saved.penalty) * 1000
+  pausedTotal = 0
+  resumed.value = true
+  status.value = 'paused'
+}
+
 function start() {
-  const { puzzle, solution } = generate(level.value, Math.random)
+  resumed.value = false
+  playingDaily.value = daily.on.value
+  const lvl = playingDaily.value ? LEVELS.find((l) => l.id === DAILY_LEVEL)! : level.value
+  const { puzzle, solution } = generate(lvl, playingDaily.value ? daily.random() : Math.random)
   game.value = createState(puzzle, solution)
   history.value = []
   selected.value = puzzle.findIndex((v) => v === 0)
@@ -70,18 +130,20 @@ function start() {
   startedAt = performance.now()
   pausedTotal = pausedAt = 0
   status.value = 'playing'
-  play('tap')
+  play('start')
   void nextTick(() => selected.value !== null && cellEls.value[selected.value]?.focus())
 }
 function pause() {
   if (status.value !== 'playing' || solved.value) return
   pausedAt = performance.now()
   status.value = 'paused'
+  flush()
 }
 function resume() {
   if (status.value !== 'paused') return
   if (pausedAt) pausedTotal += performance.now() - pausedAt
   pausedAt = 0
+  resumed.value = false
   status.value = 'playing'
 }
 
@@ -99,9 +161,10 @@ function afterPlace(i: number) {
   const v = g.values[i]
   if (!v) return
   popped.value = i
-  if (v !== g.solution[i] && conflicts(g.values).has(i)) {
+  const wrong = v !== g.solution[i] && conflicts(g.values).has(i)
+  if (wrong) {
     shaking.value = i
-    navigator.vibrate?.(20)
+    play('miss')
     setTimeout(() => (shaking.value = null), 400)
   }
   if (isSolved(g)) return win(i)
@@ -114,8 +177,8 @@ function afterPlace(i: number) {
         map.set(c, Math.min(map.get(c) ?? 9, d))
       })
     showWave(map)
-    play('eat')
-  } else play('tap')
+    play('line')
+  } else if (!wrong) play('tap')
 }
 
 /** Clears the previous wave for one frame so the CSS animation starts again. */
@@ -131,8 +194,8 @@ function win(from: number) {
   for (let c = 0; c < 81; c++)
     map.set(c, Math.abs(rowOf(c) - rowOf(from)) + Math.abs(colOf(c) - colOf(from)))
   showWave(map)
-  play('record')
-  navigator.vibrate?.([15, 30, 15])
+  play('win')
+  if (playingDaily.value) daily.solved(elapsed.value)
   winTimer = window.setTimeout(() => (status.value = 'over'), WIN_MS)
 }
 
@@ -214,6 +277,7 @@ function onKey(e: KeyboardEvent) {
 }
 
 onMounted(() => {
+  restore()
   window.addEventListener('keydown', onKey)
   timerId = window.setInterval(tickTimer, 250)
 })
@@ -254,10 +318,12 @@ function label(i: number): string {
     :game="info"
     :status="status"
     :score="elapsed"
-    :board="`sudoku:${levelId}`"
+    :board="boardId"
     :tag="penalty ? 'hints' : undefined"
-    :counts="solved"
-    over-title="Solved!"
+    :counts="solved && !playingDaily"
+    :over-title="playingDaily ? 'Daily solved!' : 'Solved!'"
+    :over-note="overNote"
+    :resumed="resumed"
     @start="start"
     @pause="pause"
     @resume="resume"
@@ -312,12 +378,22 @@ function label(i: number): string {
           type="button"
           role="radio"
           class="level"
-          :aria-checked="levelId === l.id"
-          @click="levelId = l.id"
+          :aria-checked="!daily.on.value && levelId === l.id"
+          @click="pickLevel(l.id)"
         >
           {{ l.label }}
         </button>
+        <button
+          type="button"
+          role="radio"
+          class="level level--daily"
+          :aria-checked="daily.on.value"
+          @click="daily.on.value = true"
+        >
+          <span><span class="star" aria-hidden="true">★</span> Daily</span>
+        </button>
       </div>
+      <p v-if="daily.on.value" class="daily-note">{{ daily.intro.value }}</p>
     </template>
     <template #hint>
       <p class="hint">1–9 to fill · N for notes · Ctrl+Z to undo · H for a hint (+30 s)</p>
@@ -504,10 +580,12 @@ function label(i: number): string {
 }
 .levels {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
 }
 .level {
-  min-width: 80px;
+  min-width: 72px;
   padding: 9px 14px;
   border-radius: 12px;
   font-weight: 700;
@@ -520,6 +598,15 @@ function label(i: number): string {
   color: var(--text);
   background: var(--surface);
   box-shadow: 0 0 0 2px var(--c);
+}
+.star {
+  color: var(--gold);
+}
+.daily-note {
+  margin: -4px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 .hint {
   margin: 0;

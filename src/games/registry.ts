@@ -21,8 +21,6 @@ export interface GameInfo {
   preview: Component
   /** Loads the playable game. Only games listed here appear in the lobby. */
   load: () => Promise<{ default: Component }>
-  /** True when an unfinished game can be continued. */
-  hasSave?: () => boolean
   /** Separate top players boards, e.g. one per difficulty. Board id is `${game}:${variant}`. */
   variants?: { id: string; label: string }[]
 }
