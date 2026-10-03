@@ -23,6 +23,9 @@ watch(
   theme,
   (value) => {
     document.documentElement.dataset.theme = value
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', value === 'light' ? '#f5f6fb' : '#0b0d17')
     try {
       localStorage.setItem(STORAGE_KEY, value)
     } catch {

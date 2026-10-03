@@ -10,13 +10,19 @@
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0b0d17" />
     <link rel="icon" type="image/svg+xml" href="/arcade/favicon.svg" />
+    <link rel="apple-touch-icon" href="/arcade/apple-touch-icon.png" />
     <title>Arcade — free browser games</title>
     <script>
-      // Apply the saved theme before first paint so there is no flash.
+      // Apply the saved theme (or the system one) before first paint so there is no flash.
+      let t = null
       try {
-        const t = localStorage.getItem('arcade:theme')
-        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+        t = localStorage.getItem('arcade:theme')
       } catch {}
+      if (t !== 'light' && t !== 'dark')
+        t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+      document.documentElement.dataset.theme = t
+      if (t === 'light')
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f5f6fb')
     </script>
   </head>
   <body>

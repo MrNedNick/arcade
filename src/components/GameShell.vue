@@ -442,6 +442,8 @@ function togglePause() {
 .overlay {
   position: absolute;
   inset: 0;
+  /* Above the board, including a focused cell that lifts itself with z-index. */
+  z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;

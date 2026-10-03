@@ -1,4 +1,8 @@
-/* Design tokens. Dark "arcade" palette is the default; light follows the system or the toggle. */
+/*
+ * Design tokens — the only place colours are defined. Dark "arcade" palette by default;
+ * the light one applies through data-theme, which index.html sets before first paint
+ * from the saved choice or the system setting.
+ */
 :root {
   --font-display: 'Space Grotesk Variable', system-ui, sans-serif;
   --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -61,50 +65,6 @@
   color-scheme: dark;
 }
 
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) {
-    --bg: #f5f6fb;
-    --bg-glow: rgba(14, 150, 136, 0.08);
-    --surface: #ffffff;
-    --surface-2: #eceef7;
-    --border: rgba(20, 23, 41, 0.1);
-    --text: #141729;
-    --text-muted: #555c7c;
-    --accent: #0b8a7c;
-    --accent-ink: #ffffff;
-    --accent-2: #c2186e;
-    --gold: #946000;
-    --gold-ink: #ffffff;
-    --danger: #c9362a;
-    --shadow: 0 10px 30px rgba(20, 23, 41, 0.08);
-    --board-bg: #e9ecf6;
-    --board-grid: rgba(20, 23, 41, 0.05);
-    --game-snake: #23801a;
-    --game-tetris: #6a45e8;
-    --game-minesweeper: #d8402f;
-    --game-sudoku: #b86e00;
-    --game-memory: #c93a82;
-    --tetris-i: #10a8d6;
-    --tetris-o: #e6b000;
-    --tetris-t: #8a45e6;
-    --tetris-s: #2fb043;
-    --tetris-z: #e23a52;
-    --tetris-j: #3160e6;
-    --tetris-l: #f07a14;
-    --mine-1: #1d4ed8;
-    --mine-2: #15803d;
-    --mine-3: #c81e1e;
-    --mine-4: #6d28d9;
-    --mine-5: #9a3412;
-    --mine-6: #0e7490;
-    --mine-7: #141729;
-    --mine-8: #555c7c;
-    --tile: #dde1ef;
-    --tile-hover: #d2d7ea;
-    color-scheme: light;
-  }
-}
-
 :root[data-theme='light'] {
   --bg: #f5f6fb;
   --bg-glow: rgba(14, 150, 136, 0.08);
@@ -113,7 +73,7 @@
   --border: rgba(20, 23, 41, 0.1);
   --text: #141729;
   --text-muted: #555c7c;
-  --accent: #0b8a7c;
+  --accent: #0a7d70;
   --accent-ink: #ffffff;
   --accent-2: #c2186e;
   --gold: #946000;
@@ -124,8 +84,8 @@
   --board-grid: rgba(20, 23, 41, 0.05);
   --game-snake: #23801a;
   --game-tetris: #6a45e8;
-  --game-minesweeper: #d8402f;
-  --game-sudoku: #b86e00;
+  --game-minesweeper: #cb3c2c;
+  --game-sudoku: #a16000;
   --game-memory: #c93a82;
   --tetris-i: #10a8d6;
   --tetris-o: #e6b000;
@@ -135,7 +95,7 @@
   --tetris-j: #3160e6;
   --tetris-l: #f07a14;
   --mine-1: #1d4ed8;
-  --mine-2: #15803d;
+  --mine-2: #137939;
   --mine-3: #c81e1e;
   --mine-4: #6d28d9;
   --mine-5: #9a3412;
