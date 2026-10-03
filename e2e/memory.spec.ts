@@ -14,10 +14,12 @@ test('lobby → memory: two cards turn over, faces stay hidden until then', asyn
   await expect(page.getByRole('gridcell', { name: /face down/ })).toHaveCount(16)
   // Face-down cards give nothing away, not even to a screen reader.
   await expect(page.locator('.card__face')).toHaveCount(0)
-  await page.getByRole('gridcell', { name: 'Card 1: face down' }).click()
-  await page.getByRole('gridcell', { name: 'Card 2: face down' }).click()
+  await page.getByRole('gridcell', { name: 'Row 1, column 1: face down' }).click()
+  await page.getByRole('gridcell', { name: 'Row 1, column 2: face down' }).click()
   await expect(page.locator('.stat-moves__value')).toHaveText('1')
-  await expect(page.getByRole('gridcell', { name: /^Card 1: (?!face down)/ })).toBeVisible()
+  await expect(
+    page.getByRole('gridcell', { name: /^Row 1, column 1: (?!face down)/ }),
+  ).toBeVisible()
 })
 
 test('a direct link opens memory', async ({ page }) => {

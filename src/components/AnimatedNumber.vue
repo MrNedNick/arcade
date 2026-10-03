@@ -7,7 +7,8 @@ const text = computed(() => (props.format ? props.format(props.value) : String(p
 </script>
 
 <template>
-  <span class="num" :aria-label="text">
+  <span class="num">
+    <span class="visually-hidden">{{ text }}</span>
     <Transition name="roll">
       <span :key="text" class="num__value" aria-hidden="true">{{ text }}</span>
     </Transition>

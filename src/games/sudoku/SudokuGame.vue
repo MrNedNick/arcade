@@ -289,6 +289,12 @@ onBeforeUnmount(() => {
 
 // ── What the board shows ──
 const clashes = computed(() => conflicts(game.value.values))
+/** Cells grouped in rows, so screen readers can move through the grid row by row. */
+const cellRows = computed(() =>
+  Array.from({ length: 9 }, (_, r) =>
+    Array.from({ length: 9 }, (_, c) => ({ i: r * 9 + c, v: game.value.values[r * 9 + c]! })),
+  ),
+)
 const selValue = computed(() => (selected.value === null ? 0 : game.value.values[selected.value]!))
 function related(i: number): boolean {
   const s = selected.value
@@ -336,37 +342,39 @@ function label(i: number): string {
         role="grid"
         :aria-label="`Sudoku, ${level.label}`"
       >
-        <button
-          v-for="(v, i) in game.values"
-          :key="i"
-          :ref="(el) => (cellEls[i] = el as HTMLButtonElement)"
-          type="button"
-          role="gridcell"
-          class="cell"
-          :class="{
-            'cell--given': isGiven(game, i),
-            'cell--selected': selected === i,
-            'cell--related': related(i),
-            'cell--same': !!v && v === selValue && selected !== i,
-            'cell--clash': clashes.has(i),
-            'cell--pop': popped === i && !!v,
-            'cell--shake': shaking === i,
-            'cell--hint': hinted === i,
-            'cell--wave': wave.has(i),
-            'edge-r': colOf(i) === 2 || colOf(i) === 5,
-            'edge-b': rowOf(i) === 2 || rowOf(i) === 5,
-          }"
-          :style="wave.has(i) ? { '--d': wave.get(i) } : undefined"
-          :tabindex="selected === i ? 0 : -1"
-          :aria-label="label(i)"
-          @click="select(i)"
-          @focus="select(i)"
-        >
-          <span v-if="v" :key="v" class="cell__v" aria-hidden="true">{{ v }}</span>
-          <span v-else-if="game.notes[i]" class="notes" aria-hidden="true">
-            <span v-for="d in 9" :key="d" class="note">{{ hasNote(game, i, d) ? d : '' }}</span>
-          </span>
-        </button>
+        <div v-for="(row, r) in cellRows" :key="r" role="row" class="row">
+          <button
+            v-for="{ i, v } in row"
+            :key="i"
+            :ref="(el) => (cellEls[i] = el as HTMLButtonElement)"
+            type="button"
+            role="gridcell"
+            class="cell"
+            :class="{
+              'cell--given': isGiven(game, i),
+              'cell--selected': selected === i,
+              'cell--related': related(i),
+              'cell--same': !!v && v === selValue && selected !== i,
+              'cell--clash': clashes.has(i),
+              'cell--pop': popped === i && !!v,
+              'cell--shake': shaking === i,
+              'cell--hint': hinted === i,
+              'cell--wave': wave.has(i),
+              'edge-r': colOf(i) === 2 || colOf(i) === 5,
+              'edge-b': rowOf(i) === 2 || rowOf(i) === 5,
+            }"
+            :style="wave.has(i) ? { '--d': wave.get(i) } : undefined"
+            :tabindex="selected === i ? 0 : -1"
+            :aria-label="label(i)"
+            @click="select(i)"
+            @focus="select(i)"
+          >
+            <span v-if="v" :key="v" class="cell__v" aria-hidden="true">{{ v }}</span>
+            <span v-else-if="game.notes[i]" class="notes" aria-hidden="true">
+              <span v-for="d in 9" :key="d" class="note">{{ hasNote(game, i, d) ? d : '' }}</span>
+            </span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -458,6 +466,9 @@ function label(i: number): string {
 .area {
   padding: 10px;
 }
+.row {
+  display: contents;
+}
 .board {
   display: grid;
   grid-template-columns: repeat(9, 1fr);
@@ -485,7 +496,7 @@ function label(i: number): string {
 .cell:nth-child(9n) {
   border-right: 0;
 }
-.cell:nth-last-child(-n + 9) {
+.row:last-child .cell {
   border-bottom: 0;
 }
 .edge-r {

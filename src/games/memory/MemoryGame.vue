@@ -221,6 +221,16 @@ onBeforeUnmount(() => {
 })
 
 const found = computed(() => pairsFound(game.value))
+/** Cards grouped in rows, so screen readers can move through the table row by row. */
+const cardRows = computed(() => {
+  const cols = size.value.cols
+  const cards = game.value.cards
+  return Array.from({ length: Math.ceil(cards.length / cols) }, (_, r) =>
+    cards.slice(r * cols, r * cols + cols).map((c, k) => ({ i: r * cols + k, c })),
+  )
+})
+const place = (i: number) =>
+  `Row ${Math.floor(i / size.value.cols) + 1}, column ${(i % size.value.cols) + 1}`
 const total = computed(() => game.value.cards.length / 2)
 </script>
 
@@ -253,46 +263,48 @@ const total = computed(() => game.value.cards.length / 2)
         role="grid"
         :aria-label="`Memory, ${found} of ${total} pairs found`"
       >
-        <button
-          v-for="(c, i) in game.cards"
-          :key="i"
-          :ref="(el) => (cardEls[i] = el as HTMLButtonElement)"
-          type="button"
-          role="gridcell"
-          class="card"
-          :class="{
-            'card--up': isFaceUp(game, i),
-            'card--matched': c.matched,
-            'card--bump': bump.has(i),
-            'card--shake': shake.has(i),
-            'card--fly': !!scatter,
-          }"
-          :style="
-            scatter
-              ? {
-                  '--fx': `${scatter[i]!.x}px`,
-                  '--fy': `${scatter[i]!.y}px`,
-                  '--fr': `${scatter[i]!.r}deg`,
-                  '--i': i,
-                }
-              : { '--i': i }
-          "
-          :tabindex="i === focusIndex ? 0 : -1"
-          :aria-label="
-            isFaceUp(game, i)
-              ? `Card ${i + 1}: ${c.face}${c.matched ? ', matched' : ''}`
-              : `Card ${i + 1}: face down`
-          "
-          @click="tap(i)"
-          @focus="focusIndex = i"
-        >
-          <span class="card__inner" aria-hidden="true">
-            <span class="card__back" />
-            <span class="card__front">
-              <span v-if="showFace.has(i) || c.matched" class="card__face">{{ c.face }}</span>
+        <div v-for="(row, r) in cardRows" :key="r" role="row" class="row">
+          <button
+            v-for="{ i, c } in row"
+            :key="i"
+            :ref="(el) => (cardEls[i] = el as HTMLButtonElement)"
+            type="button"
+            role="gridcell"
+            class="card"
+            :class="{
+              'card--up': isFaceUp(game, i),
+              'card--matched': c.matched,
+              'card--bump': bump.has(i),
+              'card--shake': shake.has(i),
+              'card--fly': !!scatter,
+            }"
+            :style="
+              scatter
+                ? {
+                    '--fx': `${scatter[i]!.x}px`,
+                    '--fy': `${scatter[i]!.y}px`,
+                    '--fr': `${scatter[i]!.r}deg`,
+                    '--i': i,
+                  }
+                : { '--i': i }
+            "
+            :tabindex="i === focusIndex ? 0 : -1"
+            :aria-label="
+              isFaceUp(game, i)
+                ? `${place(i)}: ${c.face}${c.matched ? ', matched' : ''}`
+                : `${place(i)}: face down`
+            "
+            @click="tap(i)"
+            @focus="focusIndex = i"
+          >
+            <span class="card__inner" aria-hidden="true">
+              <span class="card__back" />
+              <span class="card__front">
+                <span v-if="showFace.has(i) || c.matched" class="card__face">{{ c.face }}</span>
+              </span>
             </span>
-          </span>
-        </button>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -335,6 +347,9 @@ const total = computed(() => game.value.cards.length / 2)
 <style scoped>
 .area {
   padding: 12px;
+}
+.row {
+  display: contents;
 }
 .table {
   display: grid;

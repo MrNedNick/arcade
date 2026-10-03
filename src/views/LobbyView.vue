@@ -75,7 +75,11 @@ onMounted(async () => {
     <ul class="grid" role="list">
       <li v-for="(g, i) in GAMES" :key="g.id" class="grid__item" :style="{ '--i': i }">
         <RouterLink :to="`/${g.id}`" class="card" :style="{ '--c': `var(${g.color})` }">
-          <div class="card__preview" :style="{ viewTransitionName: `board-${g.id}` }">
+          <div
+            class="card__preview"
+            aria-hidden="true"
+            :style="{ viewTransitionName: `board-${g.id}` }"
+          >
             <component :is="g.preview" />
           </div>
           <div class="card__body">

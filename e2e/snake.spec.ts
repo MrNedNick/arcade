@@ -49,5 +49,5 @@ test('a top-10 score asks for a name once and lands on the board', async ({ page
   const dialog = page.getByRole('dialog', { name: 'Top players' })
   await expect(dialog.getByText('Ann')).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.locator('.stat__value').nth(1)).toHaveAttribute('aria-label', '3')
+  await expect(page.locator('.stat__value .visually-hidden').nth(1)).toHaveText('3')
 })

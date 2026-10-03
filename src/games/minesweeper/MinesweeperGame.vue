@@ -281,6 +281,13 @@ onBeforeUnmount(() => {
 })
 
 const outcome = computed(() => game.value.outcome)
+/** Cells grouped in rows, so screen readers can move through the grid row by row. */
+const cellRows = computed(() => {
+  const g = game.value
+  return Array.from({ length: g.rows }, (_, r) =>
+    Array.from({ length: g.cols }, (_, k) => ({ i: r * g.cols + k, c: g.cells[r * g.cols + k]! })),
+  )
+})
 const minesLeft = computed(() => {
   if (status.value === 'ready') {
     return daily.on.value ? LEVELS.find((l) => l.id === DAILY_LEVEL)!.mines : level.value.mines
@@ -335,51 +342,53 @@ function label(i: number): string {
         role="grid"
         :aria-label="`Minesweeper, ${playingDaily ? 'Daily' : level.label}, ${minesLeft} mines left`"
       >
-        <button
-          v-for="(c, i) in game.cells"
-          :key="i"
-          :ref="(el) => (cellEls[i] = el as HTMLButtonElement)"
-          type="button"
-          class="cell"
-          role="gridcell"
-          :class="{
-            'cell--open': c.open,
-            'cell--flag': (c.flag || (outcome === 'won' && c.mine)) && !c.open,
-            'cell--mine': outcome === 'lost' && c.mine && !c.flag,
-            'cell--boom': game.exploded === i,
-            'cell--wrong': outcome === 'lost' && c.flag && !c.mine,
-            'cell--wave': delays.has(i),
-            [`n${c.adj}`]: c.open && !c.mine && c.adj > 0,
-          }"
-          :style="delays.has(i) ? { '--d': delays.get(i) } : undefined"
-          :tabindex="i === focusIndex ? 0 : -1"
-          :aria-label="label(i)"
-          @pointerdown="onPointerDown(i, $event)"
-          @pointerup="cancelPress"
-          @pointerleave="cancelPress"
-          @pointercancel="cancelPress"
-          @click="onClick(i)"
-          @contextmenu="onContext(i, $event)"
-          @focus="focusIndex = i"
-        >
-          <span v-if="c.open && !c.mine && c.adj" class="cell__n" aria-hidden="true">{{
-            c.adj
-          }}</span>
-          <svg
-            v-else-if="(c.flag || (outcome === 'won' && c.mine)) && !c.open"
-            class="cell__flag"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
+        <div v-for="(row, r) in cellRows" :key="r" role="row" class="row">
+          <button
+            v-for="{ i, c } in row"
+            :key="i"
+            :ref="(el) => (cellEls[i] = el as HTMLButtonElement)"
+            type="button"
+            class="cell"
+            role="gridcell"
+            :class="{
+              'cell--open': c.open,
+              'cell--flag': (c.flag || (outcome === 'won' && c.mine)) && !c.open,
+              'cell--mine': outcome === 'lost' && c.mine && !c.flag,
+              'cell--boom': game.exploded === i,
+              'cell--wrong': outcome === 'lost' && c.flag && !c.mine,
+              'cell--wave': delays.has(i),
+              [`n${c.adj}`]: c.open && !c.mine && c.adj > 0,
+            }"
+            :style="delays.has(i) ? { '--d': delays.get(i) } : undefined"
+            :tabindex="i === focusIndex ? 0 : -1"
+            :aria-label="label(i)"
+            @pointerdown="onPointerDown(i, $event)"
+            @pointerup="cancelPress"
+            @pointerleave="cancelPress"
+            @pointercancel="cancelPress"
+            @click="onClick(i)"
+            @contextmenu="onContext(i, $event)"
+            @focus="focusIndex = i"
           >
-            <path d="M6 21V4" />
-            <path d="M6 4h11l-3 4 3 4H6z" class="fill" />
-          </svg>
-          <span
-            v-else-if="c.mine && (c.open || outcome === 'lost')"
-            class="cell__mine"
-            aria-hidden="true"
-          />
-        </button>
+            <span v-if="c.open && !c.mine && c.adj" class="cell__n" aria-hidden="true">{{
+              c.adj
+            }}</span>
+            <svg
+              v-else-if="(c.flag || (outcome === 'won' && c.mine)) && !c.open"
+              class="cell__flag"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M6 21V4" />
+              <path d="M6 4h11l-3 4 3 4H6z" class="fill" />
+            </svg>
+            <span
+              v-else-if="c.mine && (c.open || outcome === 'lost')"
+              class="cell__mine"
+              aria-hidden="true"
+            />
+          </button>
+        </div>
       </div>
     </div>
 
@@ -441,6 +450,9 @@ function label(i: number): string {
 .area {
   padding: 12px;
   overflow-x: auto;
+}
+.row {
+  display: contents;
 }
 .board {
   display: grid;
