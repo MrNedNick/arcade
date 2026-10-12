@@ -104,6 +104,21 @@ onMounted(async () => {
         </RouterLink>
       </li>
     </ul>
+
+    <footer class="foot">
+      <p class="foot__author">
+        Made by
+        <a href="https://www.linkedin.com/in/mrnednick/" rel="author">Nikita Nedyalkov</a>
+      </p>
+      <a class="foot__link" href="https://github.com/MrNedNick/arcade">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.4-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5a3.9 3.9 0 0 1 1-2.7 3.6 3.6 0 0 1 .1-2.7s.8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7a3.9 3.9 0 0 1 1 2.7c0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2z"
+          />
+        </svg>
+        Source code
+      </a>
+    </footer>
   </section>
 </template>
 
@@ -329,5 +344,38 @@ onMounted(async () => {
 }
 .card:hover .card__play {
   transform: scale(1.06);
+}
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.foot__author {
+  margin: 0;
+}
+.foot a {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.foot a:hover {
+  color: var(--accent);
+}
+.foot__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.foot__link svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 </style>
