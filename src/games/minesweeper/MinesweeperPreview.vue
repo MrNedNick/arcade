@@ -2,12 +2,18 @@
 // A 7×4 field: cells open in a wave from the middle, then a flag pops onto the mine.
 const COLS = 7
 const ROWS = 4
-const numbers: Record<number, number> = { 4: 1, 5: 1, 11: 1, 12: 2, 18: 1, 19: 1 }
+const MINES = [6, 13]
+// Numbers are counted from the mines, so the picture is a position a real game could reach.
+const isMine = (r: number, c: number) =>
+  r >= 0 && r < ROWS && c >= 0 && c < COLS && MINES.includes(r * COLS + c)
 const cells = Array.from({ length: COLS * ROWS }, (_, i) => {
   const r = Math.floor(i / COLS)
   const c = i % COLS
   const d = Math.max(Math.abs(r - 1), Math.abs(c - 2))
-  return { i, x: 12 + c * 20, y: 10 + r * 20, d, n: numbers[i], mine: i === 13 || i === 6 }
+  let n = 0
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++) if ((dr || dc) && isMine(r + dr, c + dc)) n++
+  return { i, x: 12 + c * 20, y: 10 + r * 20, d, n, mine: MINES.includes(i) }
 })
 </script>
 
